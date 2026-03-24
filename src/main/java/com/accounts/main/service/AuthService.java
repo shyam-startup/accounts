@@ -1,9 +1,13 @@
 package com.accounts.main.service;
 
 import com.accounts.main.controller.dto.AuthResponse;
+import com.accounts.main.controller.dto.AvailableAppResponse;
+import com.accounts.main.controller.dto.ConnectedAppResponse;
 import com.accounts.main.controller.dto.SigninRequest;
 import com.accounts.main.controller.dto.SignupRequest;
 import com.accounts.main.controller.dto.UserResponse;
+import com.accounts.main.entity.client.ClientRepository;
+import com.accounts.main.entity.client.UsersClientRepository;
 import com.accounts.main.entity.session.Session;
 import com.accounts.main.entity.session.SessionRepository;
 import com.accounts.main.entity.users.Users;
@@ -14,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -24,6 +29,8 @@ public class AuthService {
 
     private final UsersRepository usersRepository;
     private final SessionRepository sessionRepository;
+    private final UsersClientRepository usersClientRepository;
+    private final ClientRepository clientRepository;
     private final BCryptPasswordEncoder passwordEncoder;
 
     @Transactional
@@ -78,8 +85,13 @@ public class AuthService {
         Users user = session.getUser();
         return UserResponse.builder()
                 .userId(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
                 .username(user.getUsername())
                 .email(user.getEmail())
+                .enabled(user.isEnabled())
+                .confirmed(user.isConfirmed())
+                .createdAt(user.getCreatedAt())
                 .build();
     }
 
@@ -89,6 +101,33 @@ public class AuthService {
             session.setActive(false);
             sessionRepository.save(session);
         });
+    }
+
+    @Transactional(readOnly = true)
+    public List<ConnectedAppResponse> getConnectedApps(String sessionToken) {
+        Session session = sessionRepository.findBySessionToken(sessionToken)
+                .orElseThrow(() -> new IllegalStateException("Invalid session"));
+
+        Users user = session.getUser();
+        return usersClientRepository.findByUserWithClient(user).stream()
+                .map(uc -> ConnectedAppResponse.builder()
+                        .clientId(uc.getClient().getClientId())
+                        .clientName(uc.getClient().getClientName())
+                        .redirectUri(uc.getClient().getRedirectUri())
+                        .consentedAt(uc.getConsentedAt())
+                        .build())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AvailableAppResponse> getAvailableApps() {
+        return clientRepository.findAllByEnabled(true).stream()
+                .map(c -> AvailableAppResponse.builder()
+                        .clientId(c.getClientId())
+                        .clientName(c.getClientName())
+                        .redirectUri(c.getRedirectUri())
+                        .build())
+                .toList();
     }
 
     private String createSession(Users user, String ipAddress, String userAgent) {

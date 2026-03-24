@@ -1,5 +1,7 @@
 package com.accounts.main.controller;
 
+import com.accounts.main.controller.dto.AvailableAppResponse;
+import com.accounts.main.controller.dto.ConnectedAppResponse;
 import com.accounts.main.controller.dto.SigninRequest;
 import com.accounts.main.controller.dto.SignupRequest;
 import com.accounts.main.controller.dto.UserResponse;
@@ -14,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
+import java.util.List;
 
 @RestController
 @RequestMapping("/auth")
@@ -52,6 +55,20 @@ public class AuthController {
         }
         UserResponse user = authService.getCurrentUser(sessionToken);
         return ResponseEntity.ok(user);
+    }
+
+    @GetMapping("/connected-apps")
+    public ResponseEntity<List<ConnectedAppResponse>> connectedApps(
+            @CookieValue(name = COOKIE_NAME, required = false) String sessionToken) {
+        if (sessionToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(authService.getConnectedApps(sessionToken));
+    }
+
+    @GetMapping("/available-apps")
+    public ResponseEntity<List<AvailableAppResponse>> availableApps() {
+        return ResponseEntity.ok(authService.getAvailableApps());
     }
 
     @PostMapping("/signout")

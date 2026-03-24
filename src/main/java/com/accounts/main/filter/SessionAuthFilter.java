@@ -29,8 +29,10 @@ public class SessionAuthFilter extends OncePerRequestFilter {
     private static final Set<String> PUBLIC_PATHS = Set.of(
             "/auth/signin",
             "/auth/signup",
+            "/auth/available-apps",
             "/oauth/token",
-            "/oauth/userinfo"
+            "/oauth/token/validate",
+            "/oauth/validate"
     );
 
     private final SessionRepository sessionRepository;

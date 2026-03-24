@@ -2,6 +2,7 @@ package com.accounts.main.service;
 
 import com.accounts.main.controller.dto.AuthorizeResponse;
 import com.accounts.main.controller.dto.OAuthTokenResponse;
+import com.accounts.main.controller.dto.TokenValidationResponse;
 import com.accounts.main.controller.dto.UserInfoResponse;
 import com.accounts.main.entity.client.Client;
 import com.accounts.main.entity.client.ClientRepository;
@@ -9,6 +10,8 @@ import com.accounts.main.entity.client.OAuthTempCodes;
 import com.accounts.main.entity.client.OAuthTempCodesRepository;
 import com.accounts.main.entity.client.OAuthToken;
 import com.accounts.main.entity.client.OAuthTokenRepository;
+import com.accounts.main.entity.client.UsersClient;
+import com.accounts.main.entity.client.UsersClientRepository;
 import com.accounts.main.entity.session.Session;
 import com.accounts.main.entity.session.SessionRepository;
 import com.accounts.main.entity.users.Users;
@@ -31,6 +34,7 @@ public class OAuthService {
     private final ClientRepository clientRepository;
     private final OAuthTempCodesRepository tempCodesRepository;
     private final OAuthTokenRepository tokenRepository;
+    private final UsersClientRepository usersClientRepository;
     private final SessionRepository sessionRepository;
     private final BCryptPasswordEncoder passwordEncoder;
 
@@ -110,6 +114,13 @@ public class OAuthService {
 
         tokenRepository.save(token);
 
+        // Record user-client relationship if not already present
+        boolean alreadyConnected = usersClientRepository.findByUserWithClient(user)
+                .stream().anyMatch(uc -> uc.getClient().getClientId().equals(clientId));
+        if (!alreadyConnected) {
+            usersClientRepository.save(UsersClient.builder().user(user).client(client).build());
+        }
+
         UserInfoResponse userInfo = UserInfoResponse.builder()
                 .userId(user.getId().toString())
                 .username(user.getUsername())
@@ -146,6 +157,38 @@ public class OAuthService {
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public TokenValidationResponse validateToken(String accessToken) {
+        OAuthToken token = tokenRepository.findByAccessToken(accessToken).orElse(null);
+
+        if (token == null) {
+            return TokenValidationResponse.builder().valid(false).reason("Invalid access token").build();
+        }
+
+        if (token.isRevoked()) {
+            return TokenValidationResponse.builder().valid(false).reason("Access token has been revoked").build();
+        }
+
+        if (token.getAccessTokenExpiresAt().isBefore(LocalDateTime.now())) {
+            return TokenValidationResponse.builder().valid(false).reason("Access token has expired").build();
+        }
+
+        Users user = token.getUser();
+        UserInfoResponse userInfo = UserInfoResponse.builder()
+                .userId(user.getId().toString())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .build();
+
+        return TokenValidationResponse.builder()
+                .valid(true)
+                .user(userInfo)
+                .expiresAt(token.getAccessTokenExpiresAt())
                 .build();
     }
 }

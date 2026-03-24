@@ -1,11 +1,10 @@
-package com.accounts.main.controller.oauth;
+package com.accounts.main.controller;
 
 import com.accounts.main.controller.dto.AuthorizeResponse;
 import com.accounts.main.controller.dto.OAuthTokenResponse;
 import com.accounts.main.controller.dto.TokenRequest;
-import com.accounts.main.controller.dto.UserInfoResponse;
+import com.accounts.main.controller.dto.TokenValidationResponse;
 import com.accounts.main.service.OAuthService;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,16 +38,18 @@ public class OAuthController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/userinfo")
-    public ResponseEntity<UserInfoResponse> userinfo(
+    @GetMapping("/token/validate")
+    public ResponseEntity<TokenValidationResponse> validate(
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(401).build();
+            return ResponseEntity.ok(TokenValidationResponse.builder()
+                    .valid(false)
+                    .reason("Missing or malformed Authorization header")
+                    .build());
         }
 
-        String accessToken = authHeader.substring(7);
-        UserInfoResponse userInfo = oAuthService.getUserInfo(accessToken);
-        return ResponseEntity.ok(userInfo);
+        TokenValidationResponse result = oAuthService.validateToken(authHeader.substring(7));
+        return ResponseEntity.ok(result);
     }
 }
