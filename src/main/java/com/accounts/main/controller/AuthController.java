@@ -15,6 +15,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 
@@ -48,6 +49,17 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/signout")
+    public ResponseEntity<Void> signout(
+            @CookieValue(name = COOKIE_NAME, required = false) String sessionToken,
+            HttpServletResponse httpResponse) {
+        if (sessionToken != null) {
+            authService.signout(sessionToken);
+        }
+        clearSessionCookie(httpResponse);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/me")
     public ResponseEntity<UserResponse> me(@CookieValue(name = COOKIE_NAME, required = false) String sessionToken) {
         if (sessionToken == null) {
@@ -69,17 +81,6 @@ public class AuthController {
     @GetMapping("/available-apps")
     public ResponseEntity<List<AvailableAppResponse>> availableApps() {
         return ResponseEntity.ok(authService.getAvailableApps());
-    }
-
-    @PostMapping("/signout")
-    public ResponseEntity<Void> signout(
-            @CookieValue(name = COOKIE_NAME, required = false) String sessionToken,
-            HttpServletResponse httpResponse) {
-        if (sessionToken != null) {
-            authService.signout(sessionToken);
-        }
-        clearSessionCookie(httpResponse);
-        return ResponseEntity.ok().build();
     }
 
     private void setSessionCookie(HttpServletResponse response, String token) {
