@@ -29,9 +29,19 @@ function Login() {
 
   useEffect(() => {
     getMe()
-      .then(() => {
-        setAlreadyLoggedIn(true)
-        setTimeout(() => navigate('/dashboard', { replace: true }), 2000)
+      .then(async () => {
+        if (clientId) {
+          try {
+            const { data } = await authorize(clientId)
+            window.location.href = data.redirectUrl
+          } catch {
+            setAlreadyLoggedIn(true)
+            setTimeout(() => navigate('/dashboard', { replace: true }), 2000)
+          }
+        } else {
+          setAlreadyLoggedIn(true)
+          setTimeout(() => navigate('/dashboard', { replace: true }), 2000)
+        }
       })
       .catch(() => setChecking(false))
   }, [])
@@ -72,6 +82,11 @@ function Login() {
               <div className="auth-check-icon">✓</div>
               <p className="auth-check-title">Already logged in</p>
               <p className="auth-check-sub">Redirecting you to the dashboard…</p>
+            </div>
+          ) : clientId ? (
+            <div className="auth-check-popup">
+              <div className="spinner" />
+              <p className="auth-check-sub">Signing you in…</p>
             </div>
           ) : (
             <div className="auth-check-popup">

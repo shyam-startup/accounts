@@ -8,8 +8,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "oauth_tokens",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"session_id", "client_id", "user_id"}))
+@Table(name = "oauth_tokens")
 @Getter
 @Setter
 @NoArgsConstructor

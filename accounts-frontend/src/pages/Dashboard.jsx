@@ -1,12 +1,22 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getMe, signout, getConnectedApps, getAvailableApps } from '../api/auth'
+import { getMe, signout, getConnectedApps, getAvailableApps, authorize } from '../api/auth'
 import './Dashboard.css'
 
 function ShieldIcon() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  )
+}
+
+function OpenIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
     </svg>
   )
 }
@@ -47,6 +57,11 @@ function CheckIcon() {
   )
 }
 
+// Temporary client-side map of app names to their home URLs
+const APP_URLS = {
+  'CRM': 'http://localhost:5174/',
+}
+
 function Dashboard() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
@@ -54,6 +69,8 @@ function Dashboard() {
   const [availableApps, setAvailableApps] = useState([])
   const [loading, setLoading] = useState(true)
   const [signingOut, setSigningOut] = useState(false)
+  const [installing, setInstalling] = useState(null)
+  const [installError, setInstallError] = useState(null)
 
   useEffect(() => {
     Promise.all([getMe(), getConnectedApps(), getAvailableApps()])
@@ -70,6 +87,18 @@ function Dashboard() {
     setSigningOut(true)
     await signout().catch(() => {})
     navigate('/login', { replace: true })
+  }
+
+  const handleInstall = async (clientId) => {
+    setInstalling(clientId)
+    setInstallError(null)
+    try {
+      const { data } = await authorize(clientId)
+      window.location.href = data.redirectUrl
+    } catch {
+      setInstallError(clientId)
+      setInstalling(null)
+    }
   }
 
   if (loading) {
@@ -196,10 +225,32 @@ function Dashboard() {
                                 Since {new Date(connectedApp.consentedAt).toLocaleDateString()}
                               </span>
                             )}
+                            {installError === app.clientId && (
+                              <span className="db-app-card-error">Failed to connect</span>
+                            )}
                           </div>
-                          <span className={`db-app-card-tag ${connected ? 'db-tag-connected' : 'db-tag-install'}`}>
-                            {connected ? 'Connected' : 'Install'}
-                          </span>
+                          {connected ? (
+                            <div className="db-app-card-actions">
+                              <span className="db-app-card-tag db-tag-connected">Connected</span>
+                              <a
+                                href={APP_URLS[app.clientName] || app.redirectUri}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="db-app-open-btn"
+                                title={`Open ${app.clientName}`}
+                              >
+                                <OpenIcon />
+                              </a>
+                            </div>
+                          ) : (
+                            <button
+                              className="db-app-card-tag db-tag-install"
+                              onClick={() => handleInstall(app.clientId)}
+                              disabled={installing === app.clientId}
+                            >
+                              {installing === app.clientId ? <span className="spinner-xs" /> : 'Install'}
+                            </button>
+                          )}
                         </div>
                       )
                     })}
