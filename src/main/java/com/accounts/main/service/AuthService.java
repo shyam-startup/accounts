@@ -32,6 +32,7 @@ public class AuthService {
     private final UsersClientRepository usersClientRepository;
     private final ClientRepository clientRepository;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final OAuthService oAuthService;
 
     @Transactional
     public String signup(SignupRequest request, String ipAddress, String userAgent) {
@@ -100,6 +101,7 @@ public class AuthService {
         sessionRepository.findBySessionToken(sessionToken).ifPresent(session -> {
             session.setActive(false);
             sessionRepository.save(session);
+            oAuthService.revokeSessionTokens(session);
         });
     }
 

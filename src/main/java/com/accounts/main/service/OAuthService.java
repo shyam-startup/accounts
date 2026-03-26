@@ -60,6 +60,7 @@ public class OAuthService {
                 .code(UUID.randomUUID().toString())
                 .user(user)
                 .client(client)
+                .session(session)
                 .expiresAt(LocalDateTime.now().plusMinutes(CODE_EXPIRY_MINUTES))
                 .build();
 
@@ -98,18 +99,16 @@ public class OAuthService {
 
         Users user = tempCode.getUser();
 
-        OAuthToken token = tokenRepository.findByUserAndClient(user, client).orElse(null);
-        if(token == null){
-            token = OAuthToken.builder()
+        OAuthToken token = OAuthToken.builder()
                 .user(user)
                 .client(client)
+                .session(tempCode.getSession())
                 .accessToken(UUID.randomUUID().toString())
                 .refreshToken(UUID.randomUUID().toString())
                 .accessTokenExpiresAt(LocalDateTime.now().plusHours(ACCESS_TOKEN_EXPIRY_HOURS))
                 .refreshTokenExpiresAt(LocalDateTime.now().plusDays(REFRESH_TOKEN_EXPIRY_DAYS))
                 .build();
-            tokenRepository.save(token);
-        }
+        tokenRepository.save(token);
 
         boolean alreadyConnected = usersClientRepository.findByUserWithClient(user)
                 .stream().anyMatch(uc -> uc.getClient().getClientId().equals(clientId));
@@ -189,5 +188,10 @@ public class OAuthService {
                 .user(userInfo)
                 .expiresAt(token.getAccessTokenExpiresAt())
                 .build();
+    }
+
+    @Transactional
+    public void revokeSessionTokens(Session session) {
+        tokenRepository.findBySession(session).forEach(t -> t.setRevoked(true));
     }
 }
