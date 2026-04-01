@@ -60,6 +60,7 @@ public class OAuthService {
                 .code(UUID.randomUUID().toString())
                 .user(user)
                 .client(client)
+                .session(session)
                 .expiresAt(LocalDateTime.now().plusMinutes(CODE_EXPIRY_MINUTES))
                 .build();
 
@@ -98,23 +99,17 @@ public class OAuthService {
 
         Users user = tempCode.getUser();
 
-        tokenRepository.findByUserAndClient(user, client).ifPresent(existing -> {
-            existing.setRevoked(true);
-            tokenRepository.save(existing);
-        });
-
         OAuthToken token = OAuthToken.builder()
                 .user(user)
                 .client(client)
+                .session(tempCode.getSession())
                 .accessToken(UUID.randomUUID().toString())
                 .refreshToken(UUID.randomUUID().toString())
                 .accessTokenExpiresAt(LocalDateTime.now().plusHours(ACCESS_TOKEN_EXPIRY_HOURS))
                 .refreshTokenExpiresAt(LocalDateTime.now().plusDays(REFRESH_TOKEN_EXPIRY_DAYS))
                 .build();
-
         tokenRepository.save(token);
 
-        // Record user-client relationship if not already present
         boolean alreadyConnected = usersClientRepository.findByUserWithClient(user)
                 .stream().anyMatch(uc -> uc.getClient().getClientId().equals(clientId));
         if (!alreadyConnected) {
@@ -127,6 +122,9 @@ public class OAuthService {
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
+                .enabled(user.isEnabled())
+                .isConfirmed(user.isConfirmed())
+                .createdAt(user.getCreatedAt())
                 .build();
 
         return OAuthTokenResponse.builder()
@@ -190,5 +188,10 @@ public class OAuthService {
                 .user(userInfo)
                 .expiresAt(token.getAccessTokenExpiresAt())
                 .build();
+    }
+
+    @Transactional
+    public void revokeSessionTokens(Session session) {
+        tokenRepository.findBySession(session).forEach(t -> t.setRevoked(true));
     }
 }

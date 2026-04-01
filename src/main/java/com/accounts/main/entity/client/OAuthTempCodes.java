@@ -1,5 +1,6 @@
 package com.accounts.main.entity.client;
 
+import com.accounts.main.entity.session.Session;
 import com.accounts.main.entity.users.Users;
 import jakarta.persistence.*;
 import lombok.*;
@@ -29,6 +30,10 @@ public class OAuthTempCodes {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "session_id", nullable = false)
+    private Session session;
 
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;

@@ -1,5 +1,6 @@
 package com.accounts.main.entity.client;
 
+import com.accounts.main.entity.session.Session;
 import com.accounts.main.entity.users.Users;
 import jakarta.persistence.*;
 import lombok.*;
@@ -7,8 +8,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "oauth_tokens",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "client_id"}))
+@Table(name = "oauth_tokens")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -27,6 +27,10 @@ public class OAuthToken {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "session_id", nullable = false)
+    private Session session;
 
     @Column(name = "access_token", nullable = false, unique = true, length = 512)
     private String accessToken;
