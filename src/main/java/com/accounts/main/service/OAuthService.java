@@ -28,7 +28,7 @@ import java.util.UUID;
 public class OAuthService {
 
     private static final int CODE_EXPIRY_MINUTES = 5;
-    private static final int ACCESS_TOKEN_EXPIRY_HOURS = 1;
+    private static final int ACCESS_TOKEN_EXPIRY_HOURS = 24;
     private static final int REFRESH_TOKEN_EXPIRY_DAYS = 30;
 
     private final ClientRepository clientRepository;
